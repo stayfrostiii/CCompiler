@@ -1,4 +1,7 @@
-public class Test { 
+
+// Comment test
+
+public class Test {
     public static void main(String args[]) 
     { 
         int a = 5;

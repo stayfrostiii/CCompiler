@@ -1,0 +1,9 @@
+{
+    "cmake.generator": "MinGW Makefiles",
+    "cmake.configureArgs": [
+        "-DCMAKE_TOOLCHAIN_FILE="
+    ],
+    "files.associations": {
+        "vector": "cpp"
+    }
+}
