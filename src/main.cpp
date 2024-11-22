@@ -1,99 +1,159 @@
+
 #include <iostream>
-#include <fstream>
 #include <conio.h>
-#include <vector>
 #include <string>
+#include <vector>
+#include <fstream>
+#include "header/token.h"
 
 using namespace std;
 
-int main()
+bool isIden(string value)
 {
-    const char* cf_keywords[] = {
-        "if", "else", "switch", "case", "default", "while", "do", "for",
-        "break", "continue", "return"
-    };
+    if (isdigit(value[0]))
+        return false;
+    int temp;
+    for (int i = 0; i < value.length(); i++)
+    {
+        temp = value[i];
+        if ((temp < 65 || temp > 90) && (temp < 48 || temp > 57) && (temp < 97 || temp > 122) && temp != 95)
+            return false;
 
-    const char* access_modifiers[] = {
-        "private", "protected", "public"
-    };
+    }
+    return true;
+}
 
-    const char* co_keywords[] = {
-        "class", "interface", "enum", "extends", "implements", "new",
-        "this", "super"
-    };
+bool isInt(string value)
+{
+    for (int i = 0; i < value.length(); i++)
+    {
+        if (!isdigit(value[i]))
+            return false;
+    }
+    return true;
+}
 
-    const char* eh_keywords[] = {
-        "try", "catch", "finally", "throw", "throws"
-    };
+Token assignToken(string value)
+{
+    Token temp;
+    temp.value = value;
 
-    const char* pt_keywords[] = {
-        "byte", "short", "int", "long", "float", "double", "char", "boolean"
-    };
+    if (value == "int" || value == "char" || value == "short" || value == "long" || value == "float" || value == "double")
+        temp.token = DATATYPE;
 
-    const char* var_shit[] = {
-        "final", "static", "void", "volatile", "transient"
-    };
+    else if (value == "+" || value == "-" || value == "*" || value == "/")
+        temp.token = OPER;
+    
+    else if (value == "return")
+        temp.token = RET;
 
-    const char* bools[] = {
-        "true", "false"
-    };
+    else if (value == ";" || value == "}" || value == ")")
+        temp.token = END;
 
-    string filename = "..\\..\\..\\testFiles\\Test.java";
-    ifstream javaFile;
-    javaFile.open(filename);
-    vector<string> object;
-    string fileString;
-    string line;
+    else if (value == "=")
+        temp.token = EQUAL;
 
-    fileString = "";
+    else if (isIden(value))
+        temp.token = IDEN;
 
-    if (!javaFile.is_open()) {
+    else if (isInt(value))
+        temp.token = IMM;
+
+    return temp;
+}
+
+vector<Token> generateTokens(string filename)
+{
+    ifstream cFile;
+    cFile.open(filename);
+    vector<Token> tokenList;
+
+    if (!cFile.is_open()) {
         cerr << "Error: Could not open the file " << filename << endl;
         cout << "Press any key to continue...";
         _getch();
-        return 1;
+        exit(1);
     }
-    
-    string singleComm = "//";
 
-    // while (getline(javaFile, thing))
-    // {
-
-    //     if (line.substr(0,2) != singleComm)
-    //     {
-    //         fileString += line;
-    //         lines.push_back(line); 
-    //     }
-    // } 
-
+    string value;
     char ch;
+    char prevCh;
+    bool secSlash;
+    bool singleCom; // Timeout parsing the file until comment is done
+    bool multiCom; // Timeout parsing the file until comment is done
 
-    while (javaFile.get(ch))
+    value = "";
+    secSlash = false;
+    singleCom = false;
+    multiCom = false;
+
+    while(cFile.get(ch))
     {
-        if (ch == '\n' || ch == ' ' || ch =='\t' || ch == '\r' || ch == '\f' || 
-            ch == '(' || ch == ')' || ch == '{' || ch == '}' || ch == ';')
+        if (singleCom || multiCom)
         {
-            if (ch == '(' || ch == ')' || ch == '{' || ch == '}' || ch == ';')
+            if (ch == '\n' && singleCom)
+                singleCom = false;
+            if (prevCh = '*' && ch == '/' && multiCom)
+                multiCom = false;
+            continue;
+        }
+        else if (ch == '\n' || ch == ' ' || ch =='\t' || ch == '\r' || ch == '\f' || ch == '/' || ch == '*')
+        {
+            if (prevCh == '/')
             {
-                object.push_back(line);
-                object.push_back(string(1, ch));
-                line = "";
+                if (ch == '/')
+                    singleCom = true;
+                else if (ch == '*')
+                    multiCom = true;
             }
-            else if (line != "")
+            else if (value != "")
             {
-                object.push_back(line);
-                line = "";
+                Token temp = assignToken(value);
+                temp.value = value;
+                tokenList.push_back(temp);
+                cout << value << endl;
+                value = "";
             }
         }
+        else if (ch == ';')
+        {
+            if (value != "")
+            {
+                Token temp = assignToken(value);
+                temp.value = value;
+                tokenList.push_back(temp);
+                cout << value << endl;
+            }
+
+            Token temp = assignToken(string(1, ch));
+            temp.value = string(1, ch);
+            tokenList.push_back(temp);
+            cout << ch << endl;
+            value = "";
+        }
         else
-            line += ch;
+            value += ch;
+        prevCh = ch;
     }
 
-    javaFile.close();
+    cout << value << endl;
 
-    for (int i = 0; i < object.size(); i++)
+    cFile.close();
+
+    return tokenList;
+}
+
+int main()
+{
+    string filename = "..\\..\\testFiles\\mainNoBrackets.txt";
+    vector<Token> tokenList;
+
+    // Pass 1: Lexical Analyzer
+    tokenList = generateTokens(filename);
+
+    for (int i = 0; i < tokenList.size(); i++)
     {
-        cout << i + 1 << ". " << object.at(i) << endl;
+        cout << tokenList.at(i).token << " - " << tokenList.at(i).value << endl;
     }
 
     cout << "Press any key to continue...";
