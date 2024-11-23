@@ -16,7 +16,11 @@ enum TokenType
     RET, // 5
     START, // 6
     END, // 7
-    EQUAL // 8
+    EQUAL, // 8
+    BR_BEGIN, // 9
+    BR_END, // 10
+    PR_BEGIN,
+    PR_END
 };
 
 struct Token

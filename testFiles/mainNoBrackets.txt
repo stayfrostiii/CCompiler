@@ -4,6 +4,10 @@
     comment
 */
 
-// int a = 5;
-a = a + 5 + 7 + 9;
-// return 0;
+int main(){
+    // int a;
+    // int b;
+    b = b + 5;
+    a = a + 5 - 7 + 9;
+    // return 0;
+}

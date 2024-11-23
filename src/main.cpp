@@ -6,9 +6,11 @@
 #include <fstream>
 #include "header/token.h"
 #include "header/stmt.h"
+#include "header/func.h"
 
 using namespace std;
 
+// Checks to see if value is a valid identifier
 bool isIden(string value)
 {
     if (isdigit(value[0]))
@@ -24,6 +26,7 @@ bool isIden(string value)
     return true;
 }
 
+// Checks to see if value is valid integer
 bool isInt(string value)
 {
     for (int i = 0; i < value.length(); i++)
@@ -34,25 +37,26 @@ bool isInt(string value)
     return true;
 }
 
+// Assigns token to value
 Token assignToken(string value)
 {
     Token temp;
+    map<string, TokenType> tokenMap = {
+        {"if", DATATYPE}, {"char", DATATYPE}, {"short", DATATYPE}, {"long", DATATYPE}, {"float", DATATYPE}, {"double", DATATYPE}, 
+        {"+", OPER}, {"-", OPER}, {"*", OPER}, {"/", OPER}, 
+        {"return", RET},
+        {"=", EQUAL},
+        {";", END},
+        {"{", BR_BEGIN},
+        {"}", BR_END},
+        {"(", PR_BEGIN},
+        {")", PR_END}
+    };
+
     temp.value = value;
 
-    if (value == "int" || value == "char" || value == "short" || value == "long" || value == "float" || value == "double")
-        temp.token = DATATYPE;
-
-    else if (value == "+" || value == "-" || value == "*" || value == "/")
-        temp.token = OPER;
-    
-    else if (value == "return")
-        temp.token = RET;
-
-    else if (value == ";" || value == "}" || value == ")")
-        temp.token = END;
-
-    else if (value == "=")
-        temp.token = EQUAL;
+    if (tokenMap.find(value) != tokenMap.end())
+        temp.token = tokenMap[value];
 
     else if (isIden(value))
         temp.token = IDEN;
@@ -63,6 +67,7 @@ Token assignToken(string value)
     return temp;
 }
 
+// Parses file and generates tokens for each value
 vector<Token> generateTokens(string filename)
 {
     ifstream cFile;
@@ -147,7 +152,7 @@ vector<Token> generateTokens(string filename)
             else
                 checkCom = true;
         }
-        else if (ch == ';')
+        else if (ch == ';' || ch == '{' || ch == '}' || ch == '(' || ch == ')')
         {
             if (value != "")
             {
@@ -182,15 +187,52 @@ int main()
 
     // Pass 1: Lexical Analyzer
     tokenList = generateTokens(filename);
-    Stmt* test = new Stmt(0);
+    vector<Stmt*> statements;
+    vector<Token> funcDetails;
+    vector<Func*> functions;
+    int lineCounter = 0;
+    bool inFunc = false;
+    string aCode = "";
+    Stmt* stmt = new Stmt(lineCounter);
+    Func* func = new Func();
 
-    for (int i = 0; i < tokenList.size(); i++)
+    for (Token token : tokenList)
     {
-        test->add(tokenList.at(i));
+        // cout << token.value << " " << token.token << endl;
+
+        if (token.token == BR_BEGIN)
+        {
+            inFunc = true;
+            func->addDetails(funcDetails);
+        }
+        else if (token.token == BR_END)
+        {
+            func->addContent(aCode);
+            functions.push_back(func);
+            inFunc = false;
+            func = new Func();
+        }
+
+        else if (inFunc)
+        {
+            stmt->add(token);
+            if (token.token == END)
+            {
+                statements.push_back(stmt);
+                lineCounter++;
+                aCode += stmt->print();
+                stmt = new Stmt(lineCounter);
+            }
+        }
+        else
+        {
+            funcDetails.push_back(token);
+        }
         // cout << tokenList.at(i).token << " - " << tokenList.at(i).value << endl;
     }
 
-    test->print();
+    for (Func* function : functions)
+        cout << function->print();
 
     cout << "Press any key to continue...";
     _getch();

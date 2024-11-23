@@ -24,7 +24,7 @@ class Stmt
     public:
         Stmt(int);
         void add(Token);
-        void print();
+        string print();
     private:
         Node* root;
         vector<Token> expr_infix;
@@ -37,6 +37,7 @@ class Stmt
         void addExpr();
         void printRecurse(Node*);
         void cToAssem(Node*);
+
 };
 
 #endif
