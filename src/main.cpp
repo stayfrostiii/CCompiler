@@ -5,6 +5,7 @@
 #include <vector>
 #include <fstream>
 #include "header/token.h"
+#include "header/stmt.h"
 
 using namespace std;
 
@@ -81,11 +82,13 @@ vector<Token> generateTokens(string filename)
     bool secSlash;
     bool singleCom; // Timeout parsing the file until comment is done
     bool multiCom; // Timeout parsing the file until comment is done
+    bool checkCom;
 
     value = "";
     secSlash = false;
     singleCom = false;
     multiCom = false;
+    checkCom = false;
 
     while(cFile.get(ch))
     {
@@ -97,23 +100,52 @@ vector<Token> generateTokens(string filename)
                 multiCom = false;
             continue;
         }
-        else if (ch == '\n' || ch == ' ' || ch =='\t' || ch == '\r' || ch == '\f' || ch == '/' || ch == '*')
+        else if (ch == '\n' || ch == ' ' || ch =='\t' || ch == '\r' || ch == '\f')
         {
-            if (prevCh == '/')
+            if (value != "")
+            {
+                Token temp = assignToken(value);
+                temp.value = value;
+                tokenList.push_back(temp);
+                // cout << value << endl;
+                value = "";
+            }
+        }
+        else if (ch == '/' || ch =='*')
+        {
+            if (checkCom)
             {
                 if (ch == '/')
                     singleCom = true;
                 else if (ch == '*')
                     multiCom = true;
+                else
+                {
+                    Token temp = assignToken(value);
+                    temp.value = value;
+                    tokenList.push_back(temp);
+                    // cout << value << endl;
+                }
+                checkCom = false;
             }
-            else if (value != "")
+            else if (ch == '*')
             {
-                Token temp = assignToken(value);
-                temp.value = value;
+                if (value != "")
+                {
+                    Token temp = assignToken(value);
+                    temp.value = value;
+                    tokenList.push_back(temp);
+                    // cout << value << endl;
+                }
+
+                Token temp = assignToken(string(1, ch));
+                temp.value = string(1, ch);
                 tokenList.push_back(temp);
-                cout << value << endl;
+                // cout << ch << endl;
                 value = "";
             }
+            else
+                checkCom = true;
         }
         else if (ch == ';')
         {
@@ -122,13 +154,13 @@ vector<Token> generateTokens(string filename)
                 Token temp = assignToken(value);
                 temp.value = value;
                 tokenList.push_back(temp);
-                cout << value << endl;
+                // cout << value << endl;
             }
 
             Token temp = assignToken(string(1, ch));
             temp.value = string(1, ch);
             tokenList.push_back(temp);
-            cout << ch << endl;
+            // cout << ch << endl;
             value = "";
         }
         else
@@ -136,7 +168,7 @@ vector<Token> generateTokens(string filename)
         prevCh = ch;
     }
 
-    cout << value << endl;
+    // cout << value << endl;
 
     cFile.close();
 
@@ -150,11 +182,15 @@ int main()
 
     // Pass 1: Lexical Analyzer
     tokenList = generateTokens(filename);
+    Stmt* test = new Stmt(0);
 
     for (int i = 0; i < tokenList.size(); i++)
     {
-        cout << tokenList.at(i).token << " - " << tokenList.at(i).value << endl;
+        test->add(tokenList.at(i));
+        // cout << tokenList.at(i).token << " - " << tokenList.at(i).value << endl;
     }
+
+    test->print();
 
     cout << "Press any key to continue...";
     _getch();
