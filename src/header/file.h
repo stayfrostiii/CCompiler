@@ -6,6 +6,7 @@
 #include <vector>
 #include <string>
 #include <stack>
+#include <map>
 
 #include "token.h"
 
@@ -50,6 +51,7 @@ class File
         bool pathChosen;
 
         // Variables for expression parsing
+        map<string, bool> varsUsed;
         bool afterEq;
         bool secondVal;
         string currLine;
@@ -66,6 +68,8 @@ class File
         int stage;
         bool funcOn;
         stack<string> functionsInUse;
+
+        bool hasError;
 
         void generateTokens();
         Token assignToken(string);

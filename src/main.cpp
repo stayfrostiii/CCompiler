@@ -7,7 +7,7 @@
 
 int main()
 {
-    string filename = "..\\..\\testFiles\\mainNoBrackets.txt";
+    string filename = "..\\..\\testFiles\\main2.c";
 
     File file1(filename);
 

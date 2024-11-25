@@ -13,17 +13,18 @@ enum TokenType
     IMM, // 2
     OPER, // 3
     KEYWORD, // 4
-    RET, // 5
-    START, // 6
-    END, // 7
-    EQUAL, // 8
-    LOGICAL, // 9
-    BR_BEGIN, // 10
-    BR_END, // 11
-    PR_BEGIN, // 12
-    PR_END, // 13
-    JUMP, // 14
-    NOTHING // 15
+    INCDEC, // 5
+    RET, // 6
+    START, // 7
+    END, // 8
+    EQUAL, // 9
+    LOGICAL, // 10
+    BR_BEGIN, // 11
+    BR_END, // 12
+    PR_BEGIN, // 13
+    PR_END, // 14
+    JUMP, // 15
+    NOTHING // 16
 };
 
 struct Token

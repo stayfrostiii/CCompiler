@@ -8,15 +8,19 @@ int main(){
     int a;
     int b = 10;
     int c;
+    int d;
+    int e;
 
-    while (b > 10)
+    e = 5;
+
+    while (b < 10)
     {
         b = b + 10;
     }
 
-    if (f <= 5)
+    if (e <= 5)
     {
-        t = 2;
+        d = 2;
     }
 
     b = b + 5;
