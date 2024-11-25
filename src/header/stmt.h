@@ -27,16 +27,20 @@ class Stmt
         string print();
     private:
         Node* root;
+        Node* expr;
         vector<Token> expr_infix;
         vector<Token> expr_postfix;
         int line;
         string aCode;
+        string cCode;
         map<string, int> regInUse;
         bool afterEq;
+        bool isDeclaration;
+
         void constructPF();
         void addExpr();
         void printRecurse(Node*);
-        void cToAssem(Node*);
+        void cToAssemExpr(Node*);
 
 };
 

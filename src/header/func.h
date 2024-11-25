@@ -13,7 +13,7 @@ class Func
 {
     public:
         Func();
-        void addDetails(vector<Token>);
+        void addDetails(Token*);
         void addContent(string);
         string print();
     private:

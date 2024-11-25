@@ -17,10 +17,13 @@ enum TokenType
     START, // 6
     END, // 7
     EQUAL, // 8
-    BR_BEGIN, // 9
-    BR_END, // 10
-    PR_BEGIN,
-    PR_END
+    LOGICAL, // 9
+    BR_BEGIN, // 10
+    BR_END, // 11
+    PR_BEGIN, // 12
+    PR_END, // 13
+    JUMP, // 14
+    NOTHING // 15
 };
 
 struct Token

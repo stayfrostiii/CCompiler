@@ -5,9 +5,22 @@
 */
 
 int main(){
-    // int a;
-    // int b;
+    int a;
+    int b = 10;
+    int c;
+
+    while (b > 10)
+    {
+        b = b + 10;
+    }
+
+    if (f <= 5)
+    {
+        t = 2;
+    }
+
     b = b + 5;
     a = a + 5 - 7 + 9;
-    // return 0;
+    c = a - b * c - d;
+    return 0;
 }

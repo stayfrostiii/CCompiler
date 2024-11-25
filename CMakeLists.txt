@@ -3,7 +3,7 @@ project(ccompiler VERSION 0.1.0 LANGUAGES C CXX)
 
 add_executable(ccompiler 
     src/main.cpp
-    src/class/stmt.cpp
     src/class/func.cpp
+    src/class/file.cpp
 )
 
