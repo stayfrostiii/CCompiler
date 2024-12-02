@@ -28,6 +28,9 @@ File::File(string filename)
     funcOn = false;
     secondVal = false;
     hasError = false;
+    isDeclare = false;
+    endOfFor = "";
+    noOper = true;
 }
 
 void File::run()
@@ -52,6 +55,7 @@ void File::run()
     bool singleCom; // Timeout parsing the file until comment is done
     bool multiCom; // Timeout parsing the file until comment is done
     bool checkCom;
+    bool checkInc;
 
     // Initializing parsing values
     value = "";
@@ -59,6 +63,7 @@ void File::run()
     singleCom = false;
     multiCom = false;
     checkCom = false;
+    checkInc = false;
 
     // Loop
     while(cFile.get(ch))
@@ -73,6 +78,23 @@ void File::run()
             if (prevCh = '*' && ch == '/' && multiCom)
                 multiCom = false;
             continue;
+        }
+
+        
+        else if (checkInc)
+        {  
+            if (ch == '+')
+            {
+                value += ch;
+                generateAssem(value);
+                value = "";
+            }
+            else
+            {
+                generateAssem(value);
+                value = "";
+            }
+            checkInc = false;
         }
 
         // True when end of "value"
@@ -114,6 +136,25 @@ void File::run()
                 checkCom = true;
         }
 
+        else if (ch == '+')
+        {
+            if (!checkInc)
+            {
+                if (value != "")
+                {
+                    generateAssem(value);
+                    value = "";
+                    checkInc = true;
+                    value += ch;
+                }
+                else
+                {
+                    checkInc = true;
+                    value += ch;
+                }
+            }
+        }
+
         else if (ch == ';' || ch == '{' || ch == '}' || ch == '(' || ch == ')')
         {
             generateAssem(value);
@@ -132,11 +173,11 @@ void File::run()
     if (functionsInUse.size() != 0)
         hasError = true;
 
-    // for (Token toke : tokenList)
-    // {
-    //     cout << toke.value << " ~ " << toke.token << "\n";
-    // }
-    // cout << "\n\n";
+    for (Token toke : tokenList)
+    {
+        cout << toke.value << " ~ " << toke.token << "\n";
+    }
+    cout << "\n\n";
 }
 
 void File::generateAssem(string value)
@@ -342,7 +383,7 @@ void File::generateAssem(string value)
                     {
                         if (token.token == IDEN)
                         {
-                            endOfLine = "mov [" + token.value + "], eax\n";
+                            endOfLine = "mov ecx, [" + token.value + "]\n";
                             stage += 2;
                         }
                         else if (token.token == DATATYPE)
@@ -350,27 +391,33 @@ void File::generateAssem(string value)
                     }
                     else if (stage == 3 && token.token == IDEN)
                     {
-                        endOfLine = "mov [" + token.value + "], ecx\n";
+                        aCodeData += token.value + " dword ";
+                        endOfLine = "mov ecx, [" + token.value + "]\n";
+                        isDeclare = true;
                         stage++;
                     }
                     else if (stage == 4 && token.token == EQUAL)
                         stage++;
                     else if (stage == 5 && (token.token == IDEN || token.token == IMM))
                     {
+                        if (isDeclare)
+                        {
+                            aCodeData += token.value + "\n";
+                            isDeclare = false;
+                        }
                         if (token.token == IDEN)
-                            aCodeText += "mov ecx, [" + token.value + "]\n";
+                            compStmt = "mov ecx, [" + token.value + "]\n" + compStmt;
                         else
-                            aCodeText += "mov ecx, " + token.value + "\n";
+                            compStmt = "mov ecx, " + token.value + "\n" + compStmt;
                         stage++;
                     }
                     else if (stage == 6 && token.token == END)
                     {
-                        aCodeText += endOfLine;
+                        aCodeText += endOfLine + compStmt;
                         stage++;
                     }
                     else if (stage == 7 && (token.token == IDEN || token.token == IMM))
                     {
-                        aCodeText = "mov ecx, [" + token.value + "]\n";
                         stage++;
                     }
                     else if (stage == 8 && token.token == LOGICAL)
@@ -389,15 +436,33 @@ void File::generateAssem(string value)
                     else if (stage == 9 && (token.token == IDEN || token.token == IMM))
                     {                    
                         aCodeText += token.value + "\n" + jumpStmt;
-                        functionsInUse.push("jmp loop" + to_string(loopCounter) + "\n\n"
-                                            "end" + to_string(loopCounter) + ":\n");
+                        endOfFor += "jmp loop" + to_string(loopCounter) + "\n\n"
+                                            "end" + to_string(loopCounter) + ":\n";
                         stage++;
                     }
                     else if (stage == 10 && token.token == END)
                         stage++;
                     else if (stage == 11 && token.token == IDEN)
+                        stage++;
+                    else if (stage == 12 && token.token == OPER)
                     {
+                        if (token.value == "++")
+                        {
+                            endOfFor = "inc ecx\n" + endOfFor;
+                            stage++;
+                        }
+                    }
+                    else if (stage == 13 && token.token == PR_END)
+                    {
+                        stage++;
+                    }
+                    else if (stage == 14 && token.token == BR_BEGIN)
+                    {
+                        compStmt = "";
+                        endOfLine = "";
                         jumpStmt = "";
+                        functionsInUse.push(endOfFor);
+                        endOfFor = "";
                         loopCounter++;
                         stage = 0;
                         pathChosen = false;
@@ -422,7 +487,10 @@ void File::generateAssem(string value)
                     }
                     else if (stage == 2 && (token.token == IDEN || token.token == IMM))
                     {
-                        aCodeText += "mov ecx, " + token.value + "\n";
+                        if (token.token == IDEN)
+                            aCodeText += "mov ecx, [" + token.value + "]\n";
+                        else
+                            aCodeText += "mov ecx, " + token.value + "\n";
                         stage++;
                     }
                     else if (stage == 3 && token.token == LOGICAL)
@@ -441,8 +509,7 @@ void File::generateAssem(string value)
                     else if (stage == 4 && (token.token == IDEN) || (token.token == IMM))
                     {
                         aCodeText += token.value + "\n" + jumpStmt;
-                        functionsInUse.push("jmp else" + to_string(loopCounter) + "\n\n"
-                                            "else" + to_string(loopCounter) + ":\n");
+                        functionsInUse.push("else" + to_string(loopCounter) + ":\n");
                         stage++;
                     }
                     else if (stage == 5 && token.token == PR_END)
@@ -528,6 +595,7 @@ void File::generateAssem(string value)
                                 mdIndex += ("push " + token.value + "\n").length();
                                 break;
                             case OPER:
+                                noOper = false;
                                 switch(token.value.at(0))
                                 {
                                     case '+':
@@ -572,6 +640,10 @@ void File::generateAssem(string value)
                     }
                     else if (stage == 2 && token.token == END)
                     {
+                        if (noOper)
+                        {
+                            currLine += "pop eax\n";
+                        }
                         aCodeText += currLine + endOfLine + "\n";
 
                         // Reset everything
@@ -639,7 +711,7 @@ Token File::assignToken(string value)
     Token temp;
     map<string, TokenType> tokenMap = {
         {"int", DATATYPE}, {"char", DATATYPE}, {"short", DATATYPE}, {"long", DATATYPE}, {"float", DATATYPE}, {"double", DATATYPE}, 
-        {"+", OPER}, {"-", OPER}, {"*", OPER}, {"/", OPER}, 
+        {"+", OPER}, {"-", OPER}, {"*", OPER}, {"/", OPER}, {"++", OPER},
         {"while", JUMP}, {"for", JUMP}, {"if", JUMP},
         {"<", LOGICAL}, {">", LOGICAL}, {"<=", LOGICAL}, {">=", LOGICAL},
         {"++", INCDEC}, {"--", INCDEC},

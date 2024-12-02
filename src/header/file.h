@@ -70,6 +70,9 @@ class File
         stack<string> functionsInUse;
 
         bool hasError;
+        bool isDeclare;
+        bool noOper;
+        string endOfFor;
 
         void generateTokens();
         Token assignToken(string);
