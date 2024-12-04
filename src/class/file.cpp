@@ -31,6 +31,9 @@ File::File(string filename)
     isDeclare = false;
     endOfFor = "";
     noOper = true;
+    immUsed = false;
+    beforePRBegin = false;
+    needOper = false;
 }
 
 void File::run()
@@ -173,11 +176,11 @@ void File::run()
     if (functionsInUse.size() != 0)
         hasError = true;
 
-    for (Token toke : tokenList)
-    {
-        cout << toke.value << " ~ " << toke.token << "\n";
-    }
-    cout << "\n\n";
+    // for (Token toke : tokenList)
+    // {
+    //     cout << toke.value << " ~ " << toke.token << "\n";
+    // }
+    // cout << "\n\n";
 }
 
 void File::generateAssem(string value)
@@ -242,291 +245,476 @@ void File::generateAssem(string value)
             switch (path)
             {
                 case FUNCTION:
-                    if (stage == 0 && token.token == DATATYPE)
+                    switch (stage)
                     {
-                        stage++;
-                    }
-                    else if (stage == 1 && token.token == IDEN)
-                    {
-                        aCodeText += token.value + " proc\n\n";
-                        functionsInUse.push(token.value + " endp\n");
-                        stage++;
-                    }
-                    else if (stage == 2 && token.token == PR_BEGIN)
-                        stage++;
-                    else if (stage == 3 && token.token == PR_END)
-                        stage++;
-                    else if (stage == 4 && token.token == BR_BEGIN)
-                    {
-                        funcOn = true;
-                        stage = 0;
-                        pathChosen = false;
-                    }
-                    else
-                    {
-                        hasError = true;
-                        cout << "Error at line " << lineCounter << "\n";
-                        stage = 0;
-                        pathChosen = false;
+                        case 0:
+                            if (token.token == DATATYPE)
+                                stage++;
+                            else
+                                stage = -1;
+                            break;
+                        case 1:
+                            if (token.token == IDEN)
+                            {
+                                aCodeText += token.value + " proc\n\n";
+                                functionsInUse.push(token.value + " endp\n");
+                                stage++;
+                            }
+                            else
+                                stage = -1;
+                            break;
+                        case 2:
+                            if (token.token == PR_BEGIN)
+                                stage++;
+                            else
+                                stage = -1;
+                            break;
+                        case 3:
+                            if (token.token == PR_END)
+                                stage++;
+                            else
+                                stage = -1;
+                            break;
+                        case 4:
+                            if (token.token == BR_BEGIN)
+                            {
+                                funcOn = true;
+                                stage = 0;
+                                pathChosen = false;
+                            }
+                            else
+                                stage = -1;
+                            break;
+                        default:
+                            hasError = true;
+                            cout << "Error at line " << lineCounter << "\n";
+                            stage = 0;
+                            pathChosen = false;
+                            break;
                     }
                     break;
 
                 case DECLARATION:
-                    if (stage == 0 && token.token == DATATYPE)
+                    switch (stage)
                     {
-                        stage++;
-                    }
-                    else if (stage == 1 && token.token == IDEN)
-                    {
-                        aCodeData += token.value + " dword ";
-                        varsUsed[token.value] = true;
-                        stage++;
-                    }
-                    
-                    else if (stage == 2 && (token.token == EQUAL || token.token == END))
-                    {
-                        if (token.token == EQUAL)
-                            stage++;
-                        else
-                        {
-                            aCodeData += "?\n";
+                        case 0:
+                            if (token.token == DATATYPE)
+                                stage++;
+                            else
+                                stage = -1;
+                            break;
+                        case 1:
+                            if (token.token == IDEN)
+                            {
+                                aCodeData += token.value + " dword ";
+                                varsUsed[token.value] = true;
+                                stage++;
+                            }
+                            else
+                                stage = -1;
+                            break;
+                        case 2:
+                            if (token.token == EQUAL)
+                                stage++;
+                            else if (token.token == END)
+                            {
+                                aCodeData += "?\n";
+                                stage = 0;
+                                pathChosen = false;
+                            }
+                            else
+                                stage = -1;
+                            break;
+                        case 3:
+                            if (token.token == IDEN || token.token == IMM)
+                            {
+                                aCodeData += token.value + "\n";
+                                stage++;
+                            }
+                            else
+                                stage = -1;
+                            break;
+                        case 4:
+                            if (token.token == END)
+                            {
+                                stage = 0;
+                                pathChosen = false;
+                            }
+                            else
+                                stage = -1;
+                            break;
+                        default:
+                            hasError = true;
+                            cout << "Error at line " << lineCounter << "\n";
                             stage = 0;
                             pathChosen = false;
-                        }
-                    }
-                    else if (stage == 3 && (token.token == IDEN || token.token == IMM))
-                    {
-                        aCodeData += token.value + "\n";
-                        stage++;
-                    }
-                    else if (stage == 4 && token.token == END)
-                    {
-                        stage = 0;
-                        pathChosen = false;
-                    }
-                    else
-                    {
-                        hasError = true;
-                        cout << "Error at line " << lineCounter << "\n";
-                        stage = 0;
-                        pathChosen = false;
+                            break;
                     }
                     break;
 
                 case WHILE:
-                    if (stage == 0 && token.token == JUMP)
-                        stage++;
-                    else if (stage == 1 && token.token == PR_BEGIN)
+                    switch (stage)
                     {
-                        compStmt += "loop" + to_string(loopCounter) + ":\n";
-                        stage++;
-                    }
-                    else if (stage == 2 && (token.token == IDEN || token.token == IMM))
-                    {
-                        compStmt = "mov ecx, " + token.value + "\n" + compStmt;
-                        stage++;
-                    }
-                    else if (stage == 3 && (token.token == LOGICAL))
-                    {
-                        compStmt += "cmp ecx, ";
-                        if (token.value == "<")
-                            jumpStmt = "jge end" + to_string(loopCounter) + "\n";
-                        if (token.value == ">")
-                            jumpStmt = "jle end" + to_string(loopCounter) + "\n";
-                        if (token.value == "<=")
-                            jumpStmt = "jg end" + to_string(loopCounter) + "\n";
-                        if (token.value == ">=")
-                            jumpStmt = "jl end" + to_string(loopCounter) + "\n";
-                        stage++;
-                    }
-                    else if (stage == 4 && (token.token == IDEN || token.token == IMM))
-                    {
-                        compStmt += token.value + "\n" + jumpStmt;
-                        functionsInUse.push("jmp loop" + to_string(loopCounter) + "\n\n"
-                                            "end" + to_string(loopCounter) + ":\n");
-                        stage++;
-                    }
-                    else if (stage == 5 && token.token == PR_END)
-                        stage++;
-                    else if (stage == 6 && token.token == BR_BEGIN)
-                    {
-                        aCodeText += compStmt;
-                        compStmt = "";
-                        jumpStmt = "";
-                        loopCounter++;
-                        stage = 0;
-                        pathChosen = false;
-                    }
-                    else
-                    {
-                        if (stage <= 3)
-                            functionsInUse.push("Filler");
-                        hasError = true;
-                        cout << "Error at line " << lineCounter << "\n";
-                        stage = 0;
-                        pathChosen = false;
+                        case 0:
+                            if (token.token == JUMP)
+                                stage++;
+                            else
+                                stage = -1;
+                            break;
+                        case 1:
+                            if (token.token == PR_BEGIN)
+                            {
+                                compStmt += "loop" + to_string(loopCounter) + ":\n";
+                                stage++;
+                            }
+                            else
+                                stage = -1;
+                            break;
+                        case 2:
+                            if (token.token == IDEN)
+                            {
+                                compStmt = "mov ecx, [" + token.value + "]\n" + compStmt;
+                                stage++;
+                            }
+                            else if (token.token == IMM)
+                            {
+                                compStmt = "mov ecx, " + token.value + "\n" + compStmt;
+                                immUsed = true;
+                                stage++;
+                            }
+                            else
+                                stage = -1;
+                            break;
+                        case 3:
+                            if (token.token == LOGICAL)
+                            {
+                                compStmt += "cmp ecx, ";
+                                if (token.value == "<")
+                                    jumpStmt = "jge end" + to_string(loopCounter) + "\n";
+                                if (token.value == ">")
+                                    jumpStmt = "jle end" + to_string(loopCounter) + "\n";
+                                if (token.value == "<=")
+                                    jumpStmt = "jg end" + to_string(loopCounter) + "\n";
+                                if (token.value == ">=")
+                                    jumpStmt = "jl end" + to_string(loopCounter) + "\n";
+                                stage++;
+                            }
+                            else
+                                stage = -1;
+                            break;
+                        case 4:
+                            if (token.token == IDEN || token.token == IMM)
+                            {
+                                if (!immUsed && token.token == IMM)
+                                    stage = -1;
+                                else
+                                {
+                                    if (token.token == IDEN)
+                                        compStmt += "[" + token.value + "]\n" + jumpStmt;
+                                    else if (token.token == IMM)
+                                        compStmt += token.value + "\n" + jumpStmt;
+                                    beforePRBegin = true;
+                                    functionsInUse.push("jmp loop" + to_string(loopCounter) + "\n\n"
+                                                        "end" + to_string(loopCounter) + ":\n");
+                                    stage++;
+                                }
+                            }
+                            else
+                                stage = -1;
+                            break;
+                        case 5:
+                            if (token.token == PR_END)
+                                stage++;
+                            else
+                                stage = -1;
+                            break;
+                        case 6:
+                            if (token.token == BR_BEGIN)
+                            {
+                                aCodeText += compStmt;
+                                compStmt = "";
+                                jumpStmt = "";
+                                beforePRBegin = false;
+                                loopCounter++;
+                                stage = 0;
+                                pathChosen = false;
+                            }
+                            else
+                                stage = -1;
+                            break;
+                        default:
+                            if (beforePRBegin)
+                                functionsInUse.push("Filler");
+                            compStmt = "";
+                            jumpStmt = "";
+                            beforePRBegin = false;
+                            stage = 0;
+                            pathChosen = false;
+
+                            hasError = true;
+                            cout << "Error at line " << lineCounter << "\n";
+                            break;
                     }
                     break;
 
-                // NOT DONE ---------------------------------------------------------- NOT DONE
                 case FOR:
-                    if (stage == 0 && token.token == JUMP)
+                    switch (stage)
                     {
-                        stage++;
-                    }
-                    else if (stage == 1 && token.token == PR_BEGIN)
-                    {
-                        compStmt += "loop" + to_string(loopCounter) + ":\n";
-                        stage++;
-                    }
-                    else if (stage == 2 && (token.token == IDEN || token.token == DATATYPE))
-                    {
-                        if (token.token == IDEN)
-                        {
-                            endOfLine = "mov ecx, [" + token.value + "]\n";
-                            stage += 2;
-                        }
-                        else if (token.token == DATATYPE)
-                            stage++;
-                    }
-                    else if (stage == 3 && token.token == IDEN)
-                    {
-                        aCodeData += token.value + " dword ";
-                        endOfLine = "mov ecx, [" + token.value + "]\n";
-                        isDeclare = true;
-                        stage++;
-                    }
-                    else if (stage == 4 && token.token == EQUAL)
-                        stage++;
-                    else if (stage == 5 && (token.token == IDEN || token.token == IMM))
-                    {
-                        if (isDeclare)
-                        {
-                            aCodeData += token.value + "\n";
-                            isDeclare = false;
-                        }
-                        if (token.token == IDEN)
-                            compStmt = "mov ecx, [" + token.value + "]\n" + compStmt;
-                        else
-                            compStmt = "mov ecx, " + token.value + "\n" + compStmt;
-                        stage++;
-                    }
-                    else if (stage == 6 && token.token == END)
-                    {
-                        aCodeText += endOfLine + compStmt;
-                        stage++;
-                    }
-                    else if (stage == 7 && (token.token == IDEN || token.token == IMM))
-                    {
-                        stage++;
-                    }
-                    else if (stage == 8 && token.token == LOGICAL)
-                    {
-                        aCodeText += "cmp ecx, ";
-                        if (token.value == "<")
-                            jumpStmt = "jge end" + to_string(loopCounter) + "\n";
-                        if (token.value == ">")
-                            jumpStmt = "jle end" + to_string(loopCounter) + "\n";
-                        if (token.value == "<=")
-                            jumpStmt = "jg end" + to_string(loopCounter) + "\n";
-                        if (token.value == ">=")
-                            jumpStmt = "jl end" + to_string(loopCounter) + "\n";
-                        stage++;
-                    }
-                    else if (stage == 9 && (token.token == IDEN || token.token == IMM))
-                    {                    
-                        aCodeText += token.value + "\n" + jumpStmt;
-                        endOfFor += "jmp loop" + to_string(loopCounter) + "\n\n"
+                        case 0:
+                            if (token.token == JUMP)
+                                stage++;
+                            else
+                                stage = -1;
+                            break;
+                        case 1:
+                            if (token.token == PR_BEGIN)
+                            {
+                                compStmt += "loop" + to_string(loopCounter) + ":\n";
+                                stage++;
+                            }
+                            else
+                                stage = -1;
+                            break;
+                        case 2:
+                            if (token.token == IDEN || token.token == DATATYPE)
+                            {
+                                if (token.token == IDEN)
+                                {
+                                    endOfLine = "mov ecx, [" + token.value + "]\n";
+                                    stage += 2;
+                                }
+                                else if (token.token == DATATYPE)
+                                    stage++;
+                            }
+                            else
+                                stage = -1;
+                            break;
+                        case 3:
+                            if (token.token == IDEN)
+                            {
+                                aCodeData += token.value + " dword ";
+                                endOfLine = "mov ecx, [" + token.value + "]\n";
+                                isDeclare = true;
+                                stage++;
+                            }
+                            else
+                                stage = -1;
+                            break;
+                        case 4:
+                            if (token.token == EQUAL)
+                                stage++;
+                            else
+                                stage = -1;
+                            break;
+                        case 5:
+                            if (token.token == IDEN || token.token == IMM)
+                            {
+                                if (isDeclare)
+                                {
+                                    aCodeData += token.value + "\n";
+                                    isDeclare = false;
+                                }
+                                if (token.token == IDEN)
+                                    compStmt = "mov ecx, [" + token.value + "]\n" + compStmt;
+                                else
+                                    compStmt = "mov ecx, " + token.value + "\n" + compStmt;
+                                stage++;
+                            }
+                            else
+                                stage = -1;
+                            break;
+                        case 6:
+                            if (token.token == END)
+                            {
+                                aCodeText += endOfLine + compStmt;
+                                stage++;
+                            }
+                            else
+                                stage = -1;
+                            break;
+                        case 7:
+                            if (token.token == IDEN || token.token == IMM)
+                                stage++;
+                            else
+                                stage = -1;
+                            break;
+                        case 8:
+                            if (token.token == LOGICAL)
+                            {
+                                aCodeText += "cmp ecx, ";
+                                if (token.value == "<")
+                                    jumpStmt = "jge end" + to_string(loopCounter) + "\n";
+                                if (token.value == ">")
+                                    jumpStmt = "jle end" + to_string(loopCounter) + "\n";
+                                if (token.value == "<=")
+                                    jumpStmt = "jg end" + to_string(loopCounter) + "\n";
+                                if (token.value == ">=")
+                                    jumpStmt = "jl end" + to_string(loopCounter) + "\n";
+                                stage++;
+                            }
+                            else
+                                stage = -1;
+                            break;
+                        case 9:
+                            if (token.token == IDEN || token.token == IMM)
+                            {      
+                                if (token.token == IDEN)
+                                    aCodeText += "[" + token.value + "]\n" + jumpStmt;
+                                else if (token.token == IMM)
+                                    aCodeText += token.value + "\n" + jumpStmt;
+                                endOfFor += "jmp loop" + to_string(loopCounter) + "\n\n"
                                             "end" + to_string(loopCounter) + ":\n";
-                        stage++;
-                    }
-                    else if (stage == 10 && token.token == END)
-                        stage++;
-                    else if (stage == 11 && token.token == IDEN)
-                        stage++;
-                    else if (stage == 12 && token.token == OPER)
-                    {
-                        if (token.value == "++")
-                        {
-                            endOfFor = "inc ecx\n" + endOfFor;
-                            stage++;
-                        }
-                    }
-                    else if (stage == 13 && token.token == PR_END)
-                    {
-                        stage++;
-                    }
-                    else if (stage == 14 && token.token == BR_BEGIN)
-                    {
-                        compStmt = "";
-                        endOfLine = "";
-                        jumpStmt = "";
-                        functionsInUse.push(endOfFor);
-                        endOfFor = "";
-                        loopCounter++;
-                        stage = 0;
-                        pathChosen = false;
-                    }
-                    else
-                    {
-                        hasError = true;
-                        cout << "Error at line " << lineCounter << "\n";
-                        stage = 0;
-                        pathChosen = false;
+                                stage++;
+                            }
+                            else
+                                stage = -1;
+                            break;
+                        case 10:
+                            if (token.token == END)
+                                stage++;
+                            else
+                                stage = -1;
+                            break;
+                        case 11:
+                            if (token.token == IDEN)
+                                stage++;
+                            else
+                                stage = -1;
+                            break;
+                        case 12:
+                            if (token.token == OPER)
+                            {
+                                if (token.value == "++")
+                                {
+                                    endOfFor = "inc ecx\n" + endOfFor;
+                                    stage++;
+                                }
+                            }
+                            else
+                                stage = -1;
+                            break;
+                        case 13:
+                            if (token.token == PR_END)
+                                stage++;
+                            else
+                                stage = -1;
+                            break;
+                        case 14:
+                            if (token.token == BR_BEGIN)
+                            {
+                                compStmt = "";
+                                endOfLine = "";
+                                jumpStmt = "";
+                                functionsInUse.push(endOfFor);
+                                endOfFor = "";
+                                loopCounter++;
+                                stage = 0;
+                                pathChosen = false;
+                            }
+                            else
+                                stage = -1;
+                            break;
+                        default:
+                            compStmt = "";
+                            endOfLine = "";
+                            jumpStmt = "";
+                            endOfFor = "";
+                            stage = 0;
+                            pathChosen = false;
+
+                            hasError = true;
+                            cout << "Error at line " << lineCounter << "\n";
+                            break;
                     }
                     break;
 
                 case IF:
-                    if (stage == 0 && token.token == JUMP)
+                    switch (stage)
                     {
-                        stage++;
-                    }
-                    else if (stage == 1 && token.token == PR_BEGIN)
-                    {
-                        stage++;
-                    }
-                    else if (stage == 2 && (token.token == IDEN || token.token == IMM))
-                    {
-                        if (token.token == IDEN)
-                            aCodeText += "mov ecx, [" + token.value + "]\n";
-                        else
-                            aCodeText += "mov ecx, " + token.value + "\n";
-                        stage++;
-                    }
-                    else if (stage == 3 && token.token == LOGICAL)
-                    {
-                        aCodeText += "cmp ecx, ";
-                        if (token.value == "<")
-                            jumpStmt = "jge else" + to_string(loopCounter) + "\n";
-                        if (token.value == ">")
-                            jumpStmt = "jle else" + to_string(loopCounter) + "\n";
-                        if (token.value == "<=")
-                            jumpStmt = "jg else" + to_string(loopCounter) + "\n";
-                        if (token.value == ">=")
-                            jumpStmt = "jl else" + to_string(loopCounter) + "\n";
-                        stage++;
-                    }
-                    else if (stage == 4 && (token.token == IDEN) || (token.token == IMM))
-                    {
-                        aCodeText += token.value + "\n" + jumpStmt;
-                        functionsInUse.push("else" + to_string(loopCounter) + ":\n");
-                        stage++;
-                    }
-                    else if (stage == 5 && token.token == PR_END)
-                        stage++;
-                    else if (stage == 6 && token.token == BR_BEGIN)
-                    {
-                        jumpStmt = "";
-                        loopCounter++;
-                        stage = 0;
-                        pathChosen = false;
-                    }
-                    else
-                    {
-                        hasError = true;
-                        cout << "Error at line " << lineCounter << "\n";
-                        stage = 0;
-                        pathChosen = false;
+                        case 0:
+                            if (token.token == JUMP)
+                                stage++;
+                            else
+                                stage = -1;
+                            break;
+                        case 1:
+                            if (token.token == PR_BEGIN)
+                                stage++;
+                            else
+                                stage = -1;
+                            break;
+                        case 2:
+                            if (token.token == IDEN || token.token == IMM)
+                            {
+                                if (token.token == IDEN)
+                                    aCodeText += "mov ecx, [" + token.value + "]\n";
+                                else
+                                    aCodeText += "mov ecx, " + token.value + "\n";
+                                stage++;
+                            }
+                            else
+                                stage = -1;
+                            break;
+                        case 3:
+                            if (token.token == LOGICAL)
+                            {
+                                aCodeText += "cmp ecx, ";
+                                if (token.value == "<")
+                                    jumpStmt = "jge else" + to_string(loopCounter) + "\n";
+                                if (token.value == ">")
+                                    jumpStmt = "jle else" + to_string(loopCounter) + "\n";
+                                if (token.value == "<=")
+                                    jumpStmt = "jg else" + to_string(loopCounter) + "\n";
+                                if (token.value == ">=")
+                                    jumpStmt = "jl else" + to_string(loopCounter) + "\n";
+                                stage++;
+                            }
+                            else
+                                stage = -1;
+                            break;
+                        case 4:
+                            if ((token.token == IDEN) || (token.token == IMM))
+                            {
+                                if (token.token == IDEN)
+                                    aCodeText += "[" + token.value + "]\n" + jumpStmt;
+                                else if (token.token == IMM)
+                                    aCodeText += token.value + "\n" + jumpStmt;
+                                    beforePRBegin = true;
+                                functionsInUse.push("else" + to_string(loopCounter) + ":\n");
+                                stage++;
+                            }
+                            else
+                                stage = -1;
+                            break;
+                        case 5:
+                            if (token.token == PR_END)
+                                stage++;
+                            else
+                                stage = -1;
+                            break;
+                        case 6:
+                            if (token.token == BR_BEGIN)
+                            {
+                                jumpStmt = "";
+                                beforePRBegin = false;
+                                loopCounter++;
+                                stage = 0;
+                                pathChosen = false;
+                            }
+                            else
+                                stage = -1;
+                            break;
+                        default:
+                            if (beforePRBegin)
+                                functionsInUse.push("Filler");
+                            jumpStmt = "";
+                            beforePRBegin = false;
+                            stage = 0;
+                            pathChosen = false;
+
+                            hasError = true;
+                            cout << "Error at line " << lineCounter << "\n";
+                            break;
                     }
                     break;
 
@@ -583,57 +771,84 @@ void File::generateAssem(string value)
                         switch (token.token)
                         {
                             case IDEN:
-                                secondVal = ~secondVal;
-                                currLine = left + "push [" + token.value + "]\n" + right;
-                                exprIndex = (left + "push [" + token.value + "]\n").length();
-                                mdIndex += ("push [" + token.value + "]\n").length();
+                                if (needOper)
+                                {
+                                    stage = -1;
+                                    return;
+                                }
+                                else
+                                {
+                                    secondVal = ~secondVal;
+                                    currLine = left + "push [" + token.value + "]\n" + right;
+                                    exprIndex = (left + "push [" + token.value + "]\n").length();
+                                    mdIndex += ("push [" + token.value + "]\n").length();
+                                    needOper = true;
+                                }
                                 break;
                             case IMM:
-                                secondVal = ~secondVal;
-                                currLine = left + "push " + token.value + "\n" + right;
-                                exprIndex = (left + "push " + token.value + "\n").length();
-                                mdIndex += ("push " + token.value + "\n").length();
+                                if (needOper)
+                                {
+                                    stage = -1;
+                                    return;
+                                }
+                                else
+                                {
+                                    secondVal = ~secondVal;
+                                    currLine = left + "push " + token.value + "\n" + right;
+                                    exprIndex = (left + "push " + token.value + "\n").length();
+                                    mdIndex += ("push " + token.value + "\n").length();
+                                    needOper = true;
+                                }
                                 break;
                             case OPER:
-                                noOper = false;
-                                switch(token.value.at(0))
+                                if (!needOper)
                                 {
-                                    case '+':
+                                    stage = -1;
+                                    return;
+                                }
+                                else
+                                {
+                                    needOper = false;
+                                    noOper = false;
+                                    switch(token.value.at(0))
+                                    {
+                                        case '+':
+                                            exprIndex = left.length();
+                                            currLine = left + "pop ebx\n"
+                                                        "pop eax\n"
+                                                        "add eax, ebx\n"
+                                                        "push eax\n" + right;
+                                            break;
+                                        case '-':
                                         exprIndex = left.length();
                                         currLine = left + "pop ebx\n"
                                                     "pop eax\n"
-                                                    "add eax, ebx\n"
+                                                    "sub eax, ebx\n"
                                                     "push eax\n" + right;
                                         break;
-                                    case '-':
-                                    exprIndex = left.length();
-                                    currLine = left + "pop ebx\n"
-                                                "pop eax\n"
-                                                "sub eax, ebx\n"
-                                                "push eax\n" + right;
-                                    break;
-                                    case '*':
-                                    exprIndex = left.length();
-                                    currLine = left + "pop ebx\n"
-                                                "pop eax\n"
-                                                "mul ebx\n"
-                                                "push eax\n" + right;
-                                    mdIndex = (left + "pop ebx\n"
-                                                "pop eax\n"
-                                                "mul ebx\n"
-                                                "push eax\n").length();
-                                    break;
-                                    case '/':
-                                    exprIndex = left.length();
-                                    currLine = left + "pop ebx\n"
-                                                "pop eax\n"
-                                                "div ebx\n"
-                                                "push eax\n" + right;
-                                    mdIndex = (left + "pop ebx\n"
-                                                "pop eax\n"
-                                                "div ebx\n"
-                                                "push eax\n").length();
-                                    break;
+                                        case '*':
+                                        exprIndex = left.length();
+                                        currLine = left + "pop ebx\n"
+                                                    "pop eax\n"
+                                                    "mul ebx\n"
+                                                    "push eax\n" + right;
+                                        mdIndex = (left + "pop ebx\n"
+                                                    "pop eax\n"
+                                                    "mul ebx\n"
+                                                    "push eax\n").length();
+                                        break;
+                                        case '/':
+                                        exprIndex = left.length();
+                                        currLine = left + "pop ebx\n"
+                                                    "pop eax\n"
+                                                    "div ebx\n"
+                                                    "push eax\n" + right;
+                                        mdIndex = (left + "pop ebx\n"
+                                                    "pop eax\n"
+                                                    "div ebx\n"
+                                                    "push eax\n").length();
+                                        break;
+                                    }
                                 }
                                 break;
                         }
@@ -652,16 +867,24 @@ void File::generateAssem(string value)
                         exprIndex = 0;
                         mdIndex = 0;
                         secondVal = false;
+                        needOper = false;
 
                         stage = 0;
                         pathChosen = false;
                     }
                     else
                     {
-                        hasError = true;
-                        cout << "Error at line " << lineCounter << "\n";
+                        currLine = "";
+                        endOfLine = "";
+                        exprIndex = 0;
+                        mdIndex = 0;
+                        secondVal = false;
+                        needOper = false;
                         stage = 0;
                         pathChosen = false;
+
+                        hasError = true;
+                        cout << "Error at line " << lineCounter << "\n";
                     }
                     break;
 

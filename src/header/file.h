@@ -72,7 +72,10 @@ class File
         bool hasError;
         bool isDeclare;
         bool noOper;
+        bool needOper;
         string endOfFor;
+        bool immUsed;
+        bool beforePRBegin;
 
         void generateTokens();
         Token assignToken(string);
